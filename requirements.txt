@@ -1,5 +1,6 @@
-jiskta
-pandas
+# Install the SDK from the private repo (see README for token setup):
+# pip install "git+https://TOKEN@github.com/fvsever/jiskta-python.git#egg=jiskta[pandas]"
 matplotlib
 seaborn
 numpy
+jupyterlab

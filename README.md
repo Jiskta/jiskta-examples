@@ -13,8 +13,40 @@ Practical examples using the [Jiskta Climate Data API](https://jiskta.com) and t
 
 ## Setup
 
+### 1 — Get a GitHub token (one time)
+
+Both this repo and the SDK repo are private. You need a **read-only personal access token** to install the SDK and clone the examples.
+
+1. Go to **github.com/settings/tokens/new** (classic token)
+2. Name it `jiskta-read`, set expiry as you like
+3. Tick **`repo`** (or just `Contents: read`) → **Generate token**
+4. Copy the token (starts with `ghp_…`)
+
+### 2 — Clone this repo
+
 ```bash
-pip install -r requirements.txt
+git clone https://ghp_YOUR_TOKEN@github.com/fvsever/jiskta-examples.git
+cd jiskta-examples
+```
+
+### 3 — Install dependencies
+
+```bash
+pip install "git+https://ghp_YOUR_TOKEN@github.com/fvsever/jiskta-python.git#egg=jiskta[pandas]"
+pip install matplotlib seaborn numpy
+```
+
+Or install everything in one go:
+
+```bash
+pip install \
+  "git+https://ghp_YOUR_TOKEN@github.com/fvsever/jiskta-python.git#egg=jiskta[pandas]" \
+  matplotlib seaborn numpy jupyterlab
+```
+
+### 4 — Open the notebooks
+
+```bash
 jupyter lab
 ```
 
