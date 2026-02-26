@@ -573,9 +573,13 @@ function renderResults(data, yearStart, yearEnd) {
     options: chartOptions("°C"),
   });
 
-  // Credits
-  const totalCredits = (data.credits_used ?? 2);
-  document.getElementById("credits-badge").textContent = `${totalCredits} credits`;
+  // Credits — now comes directly from the query response
+  const creditsUsed = data.credits_used ?? 0;
+  const creditsLeft = data.credits_remaining;
+  const badgeText = creditsLeft != null
+    ? `${creditsUsed} used · ${creditsLeft} remaining`
+    : `${creditsUsed} credits`;
+  document.getElementById("credits-badge").textContent = badgeText;
 
   setState("results");
 }

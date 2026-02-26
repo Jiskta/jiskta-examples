@@ -23,7 +23,7 @@ app.use(express.static(join(__dirname, "public")));
 
 // ──────────────────────────────────────────────
 // GET /api/query
-// Proxy to Jiskta API; returns { airQuality, temperature, credits_remaining }
+// One call returns rows + credits_remaining together.
 // ──────────────────────────────────────────────
 app.get("/api/query", async (req, res) => {
   const { lat, lon, start, end } = req.query;
@@ -39,9 +39,7 @@ app.get("/api/query", async (req, res) => {
   try {
     const tApi = Date.now();
 
-    // Single call with all variables — the API now correctly returns 1 spatial
-    // point for mixed CAMS+ERA5 queries (per-variable grid snapping).
-    const rows = await client.query({
+    const { rows, meta } = await client.query({
       lat: latNum,
       lon: lonNum,
       start,
@@ -50,10 +48,8 @@ app.get("/api/query", async (req, res) => {
       aggregate: "monthly",
     });
 
-    console.log(`[query] Jiskta API: ${Date.now() - tApi}ms, rows=${rows.length}`);
-    const tJson = Date.now();
+    console.log(`[query] Jiskta API: ${Date.now() - tApi}ms, rows=${rows.length}, credits_remaining=${meta.credits_remaining}`);
 
-    // Split rows into air quality (CAMS) and temperature (ERA5) for the frontend.
     const aqRows = rows.map(({ lat, lon, year_month, no2_mean, pm2p5_mean }) => ({
       lat, lon, year_month, no2_mean, pm2p5_mean,
     }));
@@ -62,36 +58,20 @@ app.get("/api/query", async (req, res) => {
     }));
 
     res.json({
-      airQuality: aqRows,
-      temperature: tempRows,
-      snappedLat: rows[0]?.lat ?? latNum,
-      snappedLon: rows[0]?.lon ?? lonNum,
+      airQuality:        aqRows,
+      temperature:       tempRows,
+      snappedLat:        rows[0]?.lat ?? latNum,
+      snappedLon:        rows[0]?.lon ?? lonNum,
+      credits_used:      meta.credits_used,
+      credits_remaining: meta.credits_remaining,
     });
-    console.log(`[query] JSON send: ${Date.now() - tJson}ms | total: ${Date.now() - t0}ms`);
+    console.log(`[query] total: ${Date.now() - t0}ms`);
   } catch (err) {
     if (err instanceof JisktaError) {
       res.status(err.statusCode ?? 500).json({ error: err.message });
     } else {
       res.status(500).json({ error: String(err) });
     }
-  }
-});
-
-// ──────────────────────────────────────────────
-// GET /api/credits
-// ──────────────────────────────────────────────
-app.get("/api/credits", async (_req, res) => {
-  try {
-    const data = await client.stats({
-      lat: [48.8, 48.9],
-      lon: [2.3, 2.4],
-      start: "2023-01",
-      end: "2023-01",
-      variables: ["no2"],
-    });
-    res.json({ credits_remaining: data.credits_remaining });
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
   }
 });
 
