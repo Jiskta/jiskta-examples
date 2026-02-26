@@ -79,4 +79,11 @@ app.listen(PORT, () => {
   console.log(`\n🗺️  Jiskta Map Explorer running at http://localhost:${PORT}\n`);
   console.log("  Click anywhere on the map to explore air quality history.");
   console.log("  Ctrl+C to stop.\n");
+
+  // Warm up the connection to api.jiskta.com so the first user click
+  // doesn't pay the DNS + TLS handshake cost (~500ms).
+  client.query({ lat: 48.85, lon: 2.35, start: "2024-01", end: "2024-01",
+                 variables: ["no2"], aggregate: "monthly" })
+    .then(() => console.log("  Connection to api.jiskta.com warmed up.\n"))
+    .catch(() => {}); // ignore errors (bad key, no network, etc.)
 });
