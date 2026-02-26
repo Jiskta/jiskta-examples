@@ -471,19 +471,25 @@ async function fetchData() {
   const start = `${yearStart}-01`;
   const end = `${yearEnd}-12`;
 
+  const t0 = performance.now();
   setState("loading");
 
   try {
     const url = `/api/query?lat=${pendingLat}&lon=${pendingLon}&start=${start}&end=${end}`;
+    const tFetch = performance.now();
     const resp = await fetch(url);
+    const tFetchDone = performance.now();
     const data = await resp.json();
+    const tJsonDone = performance.now();
+
+    console.log(`[profile] fetch: ${(tFetchDone - tFetch).toFixed(1)}ms  json(): ${(tJsonDone - tFetchDone).toFixed(1)}ms  total-to-data: ${(tJsonDone - t0).toFixed(1)}ms`);
 
     if (!resp.ok) {
       showError(data.error || "Server error");
       return;
     }
 
-    renderResults(data, yearStart, yearEnd);
+    renderResults(data, yearStart, yearEnd, tJsonDone, t0);
   } catch (err) {
     showError("Network error: " + err.message);
   }
@@ -492,108 +498,117 @@ async function fetchData() {
 // ──────────────────────────────────────────────
 // Render
 // ──────────────────────────────────────────────
-function renderResults(data, yearStart, yearEnd) {
+function renderResults(data, yearStart, yearEnd, tDataReady, t0) {
   const { airQuality, temperature, snappedLat, snappedLon } = data;
 
-  // Show results panel immediately — charts update below
+  // Hide spinner — but browser won't paint until JS task yields.
+  // We force a paint by scheduling chart work in the next animation frame.
   setState("results");
+  const tStateSet = performance.now();
+  console.log(`[profile] setState(results): ${(tStateSet - t0).toFixed(1)}ms from click`);
 
-  // Coordinates
-  document.getElementById("coord-display").textContent =
-    `${snappedLat.toFixed(2)}°N, ${snappedLon.toFixed(2)}°E`;
-  document.getElementById("period-display").textContent =
-    `${yearStart}–${yearEnd}`;
+  // Yield to browser so the spinner hide PAINTS before Chart.js blocks the thread
+  requestAnimationFrame(() => {
+    const tRafStart = performance.now();
 
-  // WHO comparison (annual means over the whole period)
-  const WHO = { no2: 10, pm25: 5 };
-  const no2Mean = avg(airQuality, "no2_mean");
-  const pm25Mean = avg(airQuality, "pm2p5_mean");
+    // Coordinates
+    document.getElementById("coord-display").textContent =
+      `${snappedLat.toFixed(2)}°N, ${snappedLon.toFixed(2)}°E`;
+    document.getElementById("period-display").textContent =
+      `${yearStart}–${yearEnd}`;
 
-  setWhoCard("no2", no2Mean, WHO.no2);
-  setWhoCard("pm25", pm25Mean, WHO.pm25);
+    // WHO comparison (annual means over the whole period)
+    const WHO = { no2: 10, pm25: 5 };
+    const no2Mean = avg(airQuality, "no2_mean");
+    const pm25Mean = avg(airQuality, "pm2p5_mean");
 
-  // ── AQ chart ──
-  const labels = airQuality.map(r => r.year_month || r.date || "");
-  const no2Series = airQuality.map(r => r.no2_mean ?? null);
-  const pm25Series = airQuality.map(r => r.pm2p5_mean ?? null);
+    setWhoCard("no2", no2Mean, WHO.no2);
+    setWhoCard("pm25", pm25Mean, WHO.pm25);
 
-  if (aqChart) {
-    aqChart.data.labels = labels;
-    aqChart.data.datasets[0].data = no2Series;
-    aqChart.data.datasets[1].data = pm25Series;
-    aqChart.update("none"); // "none" = skip animation for instant redraw
-  } else {
-    aqChart = new Chart(document.getElementById("aq-chart"), {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "NO₂",
-            data: no2Series,
-            borderColor: "rgb(129,140,248)",
-            backgroundColor: "rgba(129,140,248,0.1)",
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.3,
-            fill: true,
-          },
-          {
-            label: "PM2.5",
-            data: pm25Series,
-            borderColor: "rgb(251,146,60)",
-            backgroundColor: "rgba(251,146,60,0.08)",
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.3,
-            fill: true,
-          },
-        ],
-      },
-      options: chartOptions("µg/m³"),
-    });
-  }
+    // ── AQ chart ──
+    const labels = airQuality.map(r => r.year_month || r.date || "");
+    const no2Series = airQuality.map(r => r.no2_mean ?? null);
+    const pm25Series = airQuality.map(r => r.pm2p5_mean ?? null);
 
-  // ── Temperature chart ──
-  const tempLabels = temperature.map(r => r.year_month || r.date || "");
-  // Convert Kelvin → Celsius
-  const tempSeries = temperature.map(r =>
-    r.t2m_mean != null ? +(r.t2m_mean - 273.15).toFixed(2) : null
-  );
+    if (aqChart) {
+      aqChart.data.labels = labels;
+      aqChart.data.datasets[0].data = no2Series;
+      aqChart.data.datasets[1].data = pm25Series;
+      aqChart.update("none");
+    } else {
+      aqChart = new Chart(document.getElementById("aq-chart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "NO₂",
+              data: no2Series,
+              borderColor: "rgb(129,140,248)",
+              backgroundColor: "rgba(129,140,248,0.1)",
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: true,
+            },
+            {
+              label: "PM2.5",
+              data: pm25Series,
+              borderColor: "rgb(251,146,60)",
+              backgroundColor: "rgba(251,146,60,0.08)",
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: true,
+            },
+          ],
+        },
+        options: chartOptions("µg/m³"),
+      });
+    }
 
-  if (tempChart) {
-    tempChart.data.labels = tempLabels;
-    tempChart.data.datasets[0].data = tempSeries;
-    tempChart.update("none");
-  } else {
-    tempChart = new Chart(document.getElementById("temp-chart"), {
-      type: "line",
-      data: {
-        labels: tempLabels,
-        datasets: [
-          {
-            label: "Temperature",
-            data: tempSeries,
-            borderColor: "rgb(52,211,153)",
-            backgroundColor: "rgba(52,211,153,0.1)",
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.4,
-            fill: true,
-          },
-        ],
-      },
-      options: chartOptions("°C"),
-    });
-  }
+    // ── Temperature chart ──
+    const tempLabels = temperature.map(r => r.year_month || r.date || "");
+    const tempSeries = temperature.map(r =>
+      r.t2m_mean != null ? +(r.t2m_mean - 273.15).toFixed(2) : null
+    );
 
-  // Credits — now comes directly from the query response
-  const creditsUsed = data.credits_used ?? 0;
-  const creditsLeft = data.credits_remaining;
-  const badgeText = creditsLeft != null
-    ? `${creditsUsed} used · ${creditsLeft} remaining`
-    : `${creditsUsed} credits`;
-  document.getElementById("credits-badge").textContent = badgeText;
+    if (tempChart) {
+      tempChart.data.labels = tempLabels;
+      tempChart.data.datasets[0].data = tempSeries;
+      tempChart.update("none");
+    } else {
+      tempChart = new Chart(document.getElementById("temp-chart"), {
+        type: "line",
+        data: {
+          labels: tempLabels,
+          datasets: [
+            {
+              label: "Temperature",
+              data: tempSeries,
+              borderColor: "rgb(52,211,153)",
+              backgroundColor: "rgba(52,211,153,0.1)",
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.4,
+              fill: true,
+            },
+          ],
+        },
+        options: chartOptions("°C"),
+      });
+    }
+
+    // Credits — now comes directly from the query response
+    const creditsUsed = data.credits_used ?? 0;
+    const creditsLeft = data.credits_remaining;
+    const badgeText = creditsLeft != null
+      ? `${creditsUsed} used · ${creditsLeft} remaining`
+      : `${creditsUsed} credits`;
+    document.getElementById("credits-badge").textContent = badgeText;
+
+    console.log(`[profile] charts rendered: ${(performance.now() - tRafStart).toFixed(1)}ms  total visible: ${(performance.now() - t0).toFixed(1)}ms`);
+  });
 }
 
 function setWhoCard(id, mean, limit) {
