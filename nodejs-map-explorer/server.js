@@ -34,33 +34,43 @@ app.get("/api/query", async (req, res) => {
 
   const latNum = parseFloat(lat);
   const lonNum = parseFloat(lon);
+  const t0 = Date.now();
 
   try {
-    // Single API call: CAMS air quality (NO₂ + PM2.5) + ERA5 temperature together
-    const rows = await client.query({
-      lat: latNum,
-      lon: lonNum,
-      start,
-      end,
-      variables: ["no2", "pm2p5", "t2m"],
-      aggregate: "monthly",
-    });
+    const tApi = Date.now();
 
-    // Split combined rows into air-quality and temperature arrays
-    const aqRows = rows.map(({ lat, lon, year_month, no2_mean, pm2p5_mean }) => ({
-      lat, lon, year_month, no2_mean, pm2p5_mean,
-    }));
-    const tempRows = rows.map(({ lat, lon, year_month, t2m_mean }) => ({
-      lat, lon, year_month, t2m_mean,
-    }));
+    // Fetch CAMS air quality (NO₂ + PM2.5) and ERA5 temperature in parallel.
+    // Separate calls are required: CAMS is 0.1° resolution, ERA5 is 0.25°.
+    // A mixed call returns 9 CAMS points per ERA5 cell instead of 1.
+    const [aqRows, tempRows] = await Promise.all([
+      client.query({
+        lat: latNum,
+        lon: lonNum,
+        start,
+        end,
+        variables: ["no2", "pm2p5"],
+        aggregate: "monthly",
+      }),
+      client.query({
+        lat: latNum,
+        lon: lonNum,
+        start,
+        end,
+        variables: ["t2m"],
+        aggregate: "monthly",
+      }),
+    ]);
+
+    console.log(`[query] Jiskta API: ${Date.now() - tApi}ms, aq=${aqRows.length} temp=${tempRows.length}`);
+    const tJson = Date.now();
 
     res.json({
       airQuality: aqRows,
       temperature: tempRows,
-      // expose snapped coordinates from first row
-      snappedLat: rows[0]?.lat ?? latNum,
-      snappedLon: rows[0]?.lon ?? lonNum,
+      snappedLat: aqRows[0]?.lat ?? latNum,
+      snappedLon: aqRows[0]?.lon ?? lonNum,
     });
+    console.log(`[query] JSON send: ${Date.now() - tJson}ms | total: ${Date.now() - t0}ms`);
   } catch (err) {
     if (err instanceof JisktaError) {
       res.status(err.statusCode ?? 500).json({ error: err.message });
