@@ -36,32 +36,30 @@ app.get("/api/query", async (req, res) => {
   const lonNum = parseFloat(lon);
 
   try {
-    // Fetch CAMS air quality (NO₂ + PM2.5) and ERA5 temperature in parallel
-    const [aqRows, tempRows] = await Promise.all([
-      client.query({
-        lat: latNum,
-        lon: lonNum,
-        start,
-        end,
-        variables: ["no2", "pm2p5"],
-        aggregate: "monthly",
-      }),
-      client.query({
-        lat: latNum,
-        lon: lonNum,
-        start,
-        end,
-        variables: ["t2m"],
-        aggregate: "monthly",
-      }),
-    ]);
+    // Single API call: CAMS air quality (NO₂ + PM2.5) + ERA5 temperature together
+    const rows = await client.query({
+      lat: latNum,
+      lon: lonNum,
+      start,
+      end,
+      variables: ["no2", "pm2p5", "t2m"],
+      aggregate: "monthly",
+    });
+
+    // Split combined rows into air-quality and temperature arrays
+    const aqRows = rows.map(({ lat, lon, year_month, no2_mean, pm2p5_mean }) => ({
+      lat, lon, year_month, no2_mean, pm2p5_mean,
+    }));
+    const tempRows = rows.map(({ lat, lon, year_month, t2m_mean }) => ({
+      lat, lon, year_month, t2m_mean,
+    }));
 
     res.json({
       airQuality: aqRows,
       temperature: tempRows,
       // expose snapped coordinates from first row
-      snappedLat: aqRows[0]?.lat ?? latNum,
-      snappedLon: aqRows[0]?.lon ?? lonNum,
+      snappedLat: rows[0]?.lat ?? latNum,
+      snappedLon: rows[0]?.lon ?? lonNum,
     });
   } catch (err) {
     if (err instanceof JisktaError) {
