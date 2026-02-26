@@ -482,7 +482,17 @@ async function fetchData() {
     const data = await resp.json();
     const tJsonDone = performance.now();
 
-    console.log(`[profile] fetch: ${(tFetchDone - tFetch).toFixed(1)}ms  json(): ${(tJsonDone - tFetchDone).toFixed(1)}ms  total-to-data: ${(tJsonDone - t0).toFixed(1)}ms`);
+    // Parse Server-Timing header to show server vs browser gap
+    const st = resp.headers.get("Server-Timing") || "";
+    const serverTotal = (st.match(/total[^,]*dur=(\d+)/) || [])[1];
+    const gap = serverTotal ? (tFetchDone - tFetch - parseInt(serverTotal)).toFixed(1) : "?";
+
+    console.log(
+      `[profile] fetch: ${(tFetchDone - tFetch).toFixed(1)}ms` +
+      `  server-total: ${serverTotal ?? "?"}ms` +
+      `  gap(network+queue): ${gap}ms` +
+      `  json(): ${(tJsonDone - tFetchDone).toFixed(1)}ms`
+    );
 
     if (!resp.ok) {
       showError(data.error || "Server error");

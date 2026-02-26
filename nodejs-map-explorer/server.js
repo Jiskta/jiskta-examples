@@ -48,7 +48,8 @@ app.get("/api/query", async (req, res) => {
       aggregate: "monthly",
     });
 
-    console.log(`[query] Jiskta API: ${Date.now() - tApi}ms, rows=${rows.length}, credits_remaining=${meta.credits_remaining}`);
+    const tApiMs = Date.now() - tApi;
+    console.log(`[query] Jiskta API: ${tApiMs}ms, rows=${rows.length}, credits_remaining=${meta.credits_remaining}`);
 
     const aqRows = rows.map(({ lat, lon, year_month, no2_mean, pm2p5_mean }) => ({
       lat, lon, year_month, no2_mean, pm2p5_mean,
@@ -57,15 +58,27 @@ app.get("/api/query", async (req, res) => {
       lat, lon, year_month, t2m_mean,
     }));
 
-    res.json({
+    const tSerialize = Date.now();
+    const body = {
       airQuality:        aqRows,
       temperature:       tempRows,
       snappedLat:        rows[0]?.lat ?? latNum,
       snappedLon:        rows[0]?.lon ?? lonNum,
       credits_used:      meta.credits_used,
       credits_remaining: meta.credits_remaining,
-    });
-    console.log(`[query] total: ${Date.now() - t0}ms`);
+    };
+    const tSerializeMs = Date.now() - tSerialize;
+    const tTotalMs = Date.now() - t0;
+
+    // Server-Timing header — visible in browser DevTools Network tab → Timing
+    // Shows exact server breakdown vs browser TTFB to isolate discrepancies
+    res.setHeader("Server-Timing",
+      `api;desc="Jiskta API";dur=${tApiMs},` +
+      `serialize;desc="JSON serialize";dur=${tSerializeMs},` +
+      `total;desc="Server total";dur=${tTotalMs}`
+    );
+    res.json(body);
+    console.log(`[query] total: ${tTotalMs}ms (api=${tApiMs}ms serialize=${tSerializeMs}ms)`);
   } catch (err) {
     if (err instanceof JisktaError) {
       res.status(err.statusCode ?? 500).json({ error: err.message });
