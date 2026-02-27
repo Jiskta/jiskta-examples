@@ -53,10 +53,16 @@ app.get("/api/query", async (req, res) => {
     const tApi = Date.now();
 
     // Fetch air quality+temperature and wind speed in parallel.
-    const [{ rows, meta }, { rows: windRows }] = await Promise.all([
+    // Wind (ERA5) uses allSettled so a missing ERA5 year doesn't fail the whole request.
+    const [aqResult, windResult] = await Promise.allSettled([
       client.query({ ...loc, start, end, variables: ["no2", "pm2p5", "t2m"], aggregate: "monthly" }),
       client.query({ ...loc, start, end, variables: ["wind_speed"],           aggregate: "monthly" }),
     ]);
+
+    if (aqResult.status === "rejected") throw aqResult.reason;
+    const { rows, meta } = aqResult.value;
+    const windRows = windResult.status === "fulfilled" ? windResult.value.rows : [];
+    if (windResult.status === "rejected") console.warn(`[query] wind data unavailable: ${windResult.reason?.message}`);
 
     const tApiMs = Date.now() - tApi;
     console.log(`[query] Jiskta API: ${tApiMs}ms, rows=${rows.length}, credits_remaining=${meta.credits_remaining}`);
