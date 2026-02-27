@@ -20,58 +20,82 @@ if (!apiKey) {
 const client = new JisktaClient(apiKey);
 
 app.use(express.static(join(__dirname, "public")));
+app.use(express.json());
+
+// Build location params for the SDK: named area or lat/lon point.
+const locParams = (q) =>
+  q.area ? { area: q.area } : { lat: parseFloat(q.lat), lon: parseFloat(q.lon) };
+
+function handleError(err, res) {
+  if (err instanceof JisktaError) {
+    res.status(err.statusCode ?? 500).json({ error: err.message });
+  } else {
+    res.status(500).json({ error: String(err) });
+  }
+}
 
 // ──────────────────────────────────────────────
 // GET /api/query
-// One call returns rows + credits_remaining together.
+// Params: (lat=&lon= OR area=) + start=&end=
+// Returns: { airQuality, temperature, wind, snappedLat, snappedLon, areaPolygon? }
 // ──────────────────────────────────────────────
 app.get("/api/query", async (req, res) => {
-  const { lat, lon, start, end } = req.query;
+  const { lat, lon, area, start, end } = req.query;
 
-  if (!lat || !lon || !start || !end) {
-    return res.status(400).json({ error: "lat, lon, start, end are required" });
+  if (!start || !end || (!area && (!lat || !lon))) {
+    return res.status(400).json({ error: "Provide (lat + lon) or area, plus start and end." });
   }
 
-  const latNum = parseFloat(lat);
-  const lonNum = parseFloat(lon);
-  const t0 = Date.now();
+  const loc = locParams(req.query);
+  const t0  = Date.now();
 
   try {
     const tApi = Date.now();
 
-    const { rows, meta } = await client.query({
-      lat: latNum,
-      lon: lonNum,
-      start,
-      end,
-      variables: ["no2", "pm2p5", "t2m"],
-      aggregate: "monthly",
-    });
+    // Fetch air quality+temperature and wind speed in parallel.
+    const [{ rows, meta }, { rows: windRows }] = await Promise.all([
+      client.query({ ...loc, start, end, variables: ["no2", "pm2p5", "t2m"], aggregate: "monthly" }),
+      client.query({ ...loc, start, end, variables: ["wind_speed"],           aggregate: "monthly" }),
+    ]);
 
     const tApiMs = Date.now() - tApi;
     console.log(`[query] Jiskta API: ${tApiMs}ms, rows=${rows.length}, credits_remaining=${meta.credits_remaining}`);
 
-    const aqRows = rows.map(({ lat, lon, year_month, no2_mean, pm2p5_mean }) => ({
-      lat, lon, year_month, no2_mean, pm2p5_mean,
-    }));
-    const tempRows = rows.map(({ lat, lon, year_month, t2m_mean }) => ({
-      lat, lon, year_month, t2m_mean,
-    }));
+    const aqRows   = rows.map(({ lat, lon, year_month, no2_mean, pm2p5_mean }) => ({ lat, lon, year_month, no2_mean, pm2p5_mean }));
+    const tempRows = rows.map(({ lat, lon, year_month, t2m_mean })             => ({ lat, lon, year_month, t2m_mean }));
 
     const tSerialize = Date.now();
     const body = {
       airQuality:        aqRows,
       temperature:       tempRows,
-      snappedLat:        rows[0]?.lat ?? latNum,
-      snappedLon:        rows[0]?.lon ?? lonNum,
+      wind:              windRows,
+      snappedLat:        rows[0]?.lat ?? parseFloat(lat),
+      snappedLon:        rows[0]?.lon ?? parseFloat(lon),
       credits_used:      meta.credits_used,
       credits_remaining: meta.credits_remaining,
     };
     const tSerializeMs = Date.now() - tSerialize;
-    const tTotalMs = Date.now() - t0;
+    const tTotalMs     = Date.now() - t0;
 
-    // Server-Timing header — visible in browser DevTools Network tab → Timing
-    // Shows exact server breakdown vs browser TTFB to isolate discrepancies
+    // For named-area queries, fetch the GeoJSON polygon for map rendering.
+    if (area) {
+      try {
+        const url = `https://api.jiskta.com/api/v1/climate/query?` +
+          `area=${encodeURIComponent(area)}&time_start=${start}&time_end=${end}` +
+          `&variables=no2&format=stats&include_polygon=true`;
+        const polyResp = await fetch(url, { headers: { "X-API-Key": apiKey } });
+        if (polyResp.ok) {
+          const polyData = await polyResp.json();
+          body.areaPolygon = polyData.polygon ?? null;
+          if (polyData.bbox) {
+            const [minLon, minLat, maxLon, maxLat] = polyData.bbox;
+            body.snappedLat = (minLat + maxLat) / 2;
+            body.snappedLon = (minLon + maxLon) / 2;
+          }
+        }
+      } catch (_) { /* polygon fetch is best-effort */ }
+    }
+
     res.setHeader("Server-Timing",
       `api;desc="Jiskta API";dur=${tApiMs},` +
       `serialize;desc="JSON serialize";dur=${tSerializeMs},` +
@@ -79,13 +103,77 @@ app.get("/api/query", async (req, res) => {
     );
     res.json(body);
     console.log(`[query] total: ${tTotalMs}ms (api=${tApiMs}ms serialize=${tSerializeMs}ms)`);
-  } catch (err) {
-    if (err instanceof JisktaError) {
-      res.status(err.statusCode ?? 500).json({ error: err.message });
-    } else {
-      res.status(500).json({ error: String(err) });
-    }
+  } catch (err) { handleError(err, res); }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/exceedance
+// Returns daily NO₂ for the calendar heatmap.
+// ──────────────────────────────────────────────
+app.get("/api/exceedance", async (req, res) => {
+  const { lat, lon, area, start, end } = req.query;
+
+  if (!start || !end || (!area && (!lat || !lon))) {
+    return res.status(400).json({ error: "Provide (lat + lon) or area, plus start and end." });
   }
+
+  try {
+    const { rows } = await client.query({
+      ...locParams(req.query), start, end,
+      variables: ["no2"], aggregate: "daily",
+    });
+    res.json({ rows });
+  } catch (err) { handleError(err, res); }
+});
+
+// ──────────────────────────────────────────────
+// GET /api/seasonal
+// Returns seasonal NO₂ + PM2.5 (DJF, MAM, JJA, SON).
+// ──────────────────────────────────────────────
+app.get("/api/seasonal", async (req, res) => {
+  const { lat, lon, area, start, end } = req.query;
+
+  if (!start || !end || (!area && (!lat || !lon))) {
+    return res.status(400).json({ error: "Provide (lat + lon) or area, plus start and end." });
+  }
+
+  try {
+    const { rows } = await client.query({
+      ...locParams(req.query), start, end,
+      variables: ["no2", "pm2p5"], aggregate: "seasonal",
+    });
+    res.json({ rows });
+  } catch (err) { handleError(err, res); }
+});
+
+// ──────────────────────────────────────────────
+// POST /api/mask
+// Body: { lat_min, lat_max, lon_min, lon_max, start, end, mask, variables?, aggregate? }
+// Returns: { rows, credits_used }
+// ──────────────────────────────────────────────
+app.post("/api/mask", async (req, res) => {
+  const { lat_min, lat_max, lon_min, lon_max, start, end, mask, variables, aggregate } = req.body;
+
+  if (!lat_min || !lat_max || !lon_min || !lon_max || !start || !end || !mask) {
+    return res.status(400).json({
+      error: "lat_min, lat_max, lon_min, lon_max, start, end, mask are required.",
+    });
+  }
+
+  try {
+    const result = await client.queryWithMask({
+      lat_min: parseFloat(lat_min),
+      lat_max: parseFloat(lat_max),
+      lon_min: parseFloat(lon_min),
+      lon_max: parseFloat(lon_max),
+      start, end,
+      variables:  variables  ?? ["no2", "pm2p5"],
+      aggregate:  aggregate  ?? "monthly",
+      mask,
+    });
+    const rows = result.rows ?? result;
+    res.json({ rows, credits_used: result.meta?.credits_used ?? 0 });
+  } catch (err) { handleError(err, res); }
 });
 
 app.listen(PORT, () => {

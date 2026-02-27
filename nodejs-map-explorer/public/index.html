@@ -7,7 +7,9 @@
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
@@ -31,6 +33,7 @@
       --no2: #818cf8;
       --pm25: #fb923c;
       --temp: #34d399;
+      --wind: #06b6d4;
     }
 
     html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
@@ -68,11 +71,47 @@
       width: 28px; height: 28px;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       border-radius: 8px;
+      flex-shrink: 0;
     }
 
     .logo h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
     .logo span { font-size: 12px; color: var(--muted); font-weight: 400; }
 
+    /* ── Area search (Feature 1) ── */
+    .search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .search-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .search-input::placeholder { color: var(--muted); }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+
+    .clear-btn:hover { color: var(--text); background: var(--surface2); }
+
+    /* ── Year controls ── */
     #year-controls {
       display: flex;
       align-items: center;
@@ -109,6 +148,33 @@
 
     #fetch-btn:hover { opacity: 0.9; }
     #fetch-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Tabs (Features 3, 4, 6) ── */
+    #tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 10px 9px 8px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
     /* ── Content area ── */
     #sidebar-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
@@ -163,12 +229,7 @@
     }
 
     .location-tag .pin { font-size: 16px; }
-
-    .location-tag .coords {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
+    .location-tag .coords { font-size: 13px; color: var(--muted); }
     .location-tag .period {
       margin-left: auto;
       font-size: 11px;
@@ -183,7 +244,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
 
     .who-card {
@@ -196,11 +257,26 @@
     .who-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
     .who-card .value { font-size: 22px; font-weight: 700; line-height: 1; }
     .who-card .unit { font-size: 11px; color: var(--muted); margin-top: 2px; }
-
     .who-bar-wrap { margin-top: 8px; background: var(--border); border-radius: 4px; height: 4px; overflow: hidden; }
     .who-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-
     .who-card .who-note { font-size: 10px; margin-top: 5px; }
+
+    /* ── Trend badges (Feature 2) ── */
+    #trend-badges {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .trend-badge {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
 
     /* ── Section title ── */
     .section-title {
@@ -231,8 +307,103 @@
     }
 
     .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-
     canvas { width: 100% !important; }
+
+    /* ── Exceedance calendar (Feature 3) ── */
+    .exc-summary {
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .exc-legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .exc-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .exc-legend-item::before {
+      content: "";
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      background: var(--c);
+    }
+
+    .exc-month-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+
+    .exc-month-label {
+      font-size: 10px;
+      color: var(--muted);
+      width: 54px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .exc-days { display: flex; gap: 2px; }
+
+    .exc-cell {
+      width: 8px; height: 8px;
+      border-radius: 1px;
+      flex-shrink: 0;
+    }
+
+    /* ── Draw area (Feature 6) ── */
+    .action-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .action-btn:hover { opacity: 0.9; }
+
+    .action-btn.secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ── Tab placeholder ── */
+    .tab-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 40px 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .tab-placeholder span { font-size: 32px; }
 
     /* ── Credits footer ── */
     #credits-footer {
@@ -243,6 +414,7 @@
       justify-content: space-between;
       font-size: 12px;
       color: var(--muted);
+      flex-shrink: 0;
     }
 
     .credits-used { display: flex; align-items: center; gap: 5px; }
@@ -258,15 +430,6 @@
     /* ── Leaflet overrides ── */
     .leaflet-container { background: #1a1d27; }
     .leaflet-tile-pane { filter: brightness(0.85) saturate(0.7); }
-
-    .jiskta-marker {
-      background: var(--accent);
-      border: 2px solid white;
-      border-radius: 50%;
-      width: 12px;
-      height: 12px;
-      box-shadow: 0 0 0 4px rgba(99,102,241,0.3);
-    }
 
     .leaflet-popup-content-wrapper {
       background: var(--surface);
@@ -318,6 +481,30 @@
           <span>Powered by Jiskta · CAMS + ERA5 data</span>
         </div>
       </div>
+
+      <!-- Feature 1: Named area search -->
+      <div class="search-wrap">
+        <input id="area-input" class="search-input" list="area-list"
+               placeholder="🔍 Search city or country…" autocomplete="off" />
+        <datalist id="area-list">
+          <!-- Countries -->
+          <option value="France"><option value="Germany"><option value="Belgium">
+          <option value="Netherlands"><option value="Spain"><option value="Italy">
+          <option value="Portugal"><option value="Switzerland"><option value="Austria">
+          <option value="Denmark"><option value="Sweden"><option value="Norway">
+          <option value="Finland"><option value="Poland"><option value="Czechia">
+          <option value="UK"><option value="Ireland">
+          <!-- Cities -->
+          <option value="Paris"><option value="London"><option value="Berlin">
+          <option value="Amsterdam"><option value="Brussels"><option value="Vienna">
+          <option value="Zurich"><option value="Madrid"><option value="Rome">
+          <option value="Lisbon"><option value="Dublin"><option value="Stockholm">
+          <option value="Oslo"><option value="Copenhagen"><option value="Warsaw">
+          <option value="Prague">
+        </datalist>
+        <button id="clear-area-btn" class="clear-btn" style="display:none" title="Clear">✕</button>
+      </div>
+
       <div id="year-controls">
         <label>From</label>
         <input type="number" class="year-input" id="year-start" value="2023" min="2013" max="2025" />
@@ -327,12 +514,20 @@
       </div>
     </div>
 
+    <!-- Tabs — visible only when results are loaded -->
+    <div id="tabs" style="display:none">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="exceedance">Exceedance</button>
+      <button class="tab-btn" data-tab="seasonal">Seasonal</button>
+      <button class="tab-btn" data-tab="draw">Draw Area</button>
+    </div>
+
     <div id="sidebar-body">
       <!-- Welcome -->
       <div id="welcome">
         <div class="welcome-icon">🌍</div>
         <h2>Pick a location</h2>
-        <p>Click anywhere on the map to explore historical air quality, including NO₂, PM2.5, and temperature from 2013 onwards.</p>
+        <p>Click anywhere on the map or search for a city/country to explore historical air quality, NO₂, PM2.5, temperature, and wind from 2013 onwards.</p>
       </div>
 
       <!-- Loading -->
@@ -352,44 +547,108 @@
           <span class="period" id="period-display"></span>
         </div>
 
-        <!-- WHO compliance cards -->
-        <p class="section-title">Annual averages vs WHO guidelines</p>
-        <div class="who-grid">
-          <div class="who-card">
-            <div class="label">NO₂</div>
-            <div class="value" id="no2-val">—</div>
-            <div class="unit">µg/m³ · WHO limit: 10</div>
-            <div class="who-bar-wrap"><div class="who-bar" id="no2-bar"></div></div>
-            <div class="who-note" id="no2-note"></div>
+        <!-- ── Overview tab ── -->
+        <div id="tab-overview" class="tab-panel">
+          <p class="section-title">Annual averages vs WHO guidelines</p>
+          <div class="who-grid">
+            <div class="who-card">
+              <div class="label">NO₂</div>
+              <div class="value" id="no2-val">—</div>
+              <div class="unit">µg/m³ · WHO limit: 10</div>
+              <div class="who-bar-wrap"><div class="who-bar" id="no2-bar"></div></div>
+              <div class="who-note" id="no2-note"></div>
+            </div>
+            <div class="who-card">
+              <div class="label">PM2.5</div>
+              <div class="value" id="pm25-val">—</div>
+              <div class="unit">µg/m³ · WHO limit: 5</div>
+              <div class="who-bar-wrap"><div class="who-bar" id="pm25-bar"></div></div>
+              <div class="who-note" id="pm25-note"></div>
+            </div>
           </div>
-          <div class="who-card">
-            <div class="label">PM2.5</div>
-            <div class="value" id="pm25-val">—</div>
-            <div class="unit">µg/m³ · WHO limit: 5</div>
-            <div class="who-bar-wrap"><div class="who-bar" id="pm25-bar"></div></div>
-            <div class="who-note" id="pm25-note"></div>
+
+          <!-- Feature 2: Trend badges -->
+          <div id="trend-badges">
+            <div class="trend-badge" id="no2-trend"></div>
+            <div class="trend-badge" id="pm25-trend"></div>
+          </div>
+
+          <!-- Monthly charts -->
+          <p class="section-title">Monthly trend</p>
+          <div class="chart-wrap">
+            <div class="chart-title">
+              <span class="dot" style="background:var(--no2)"></span> NO₂
+              &nbsp;
+              <span class="dot" style="background:var(--pm25)"></span> PM2.5
+              <span style="color:var(--muted);font-size:11px;margin-left:auto">µg/m³</span>
+            </div>
+            <canvas id="aq-chart" height="180"></canvas>
+          </div>
+
+          <div class="chart-wrap">
+            <div class="chart-title">
+              <span class="dot" style="background:var(--temp)"></span> Temperature (2m)
+              <span style="color:var(--muted);font-size:11px;margin-left:auto">°C</span>
+            </div>
+            <canvas id="temp-chart" height="140"></canvas>
+          </div>
+
+          <!-- Feature 5: Wind speed chart -->
+          <div class="chart-wrap" id="wind-chart-wrap">
+            <div class="chart-title">
+              <span class="dot" style="background:var(--wind)"></span> Wind speed (10m)
+              <span style="color:var(--muted);font-size:11px;margin-left:auto">m/s</span>
+            </div>
+            <canvas id="wind-chart" height="130"></canvas>
           </div>
         </div>
 
-        <!-- Air quality chart -->
-        <p class="section-title">Monthly trend</p>
-        <div class="chart-wrap">
-          <div class="chart-title">
-            <span class="dot" style="background:var(--no2)"></span> NO₂
-            &nbsp;
-            <span class="dot" style="background:var(--pm25)"></span> PM2.5
-            <span style="color:var(--muted);font-size:11px;margin-left:auto">µg/m³</span>
+        <!-- ── Exceedance tab (Feature 3) ── -->
+        <div id="tab-exceedance" class="tab-panel" style="display:none">
+          <div id="exceedance-content">
+            <div class="tab-placeholder">
+              <span>📅</span>
+              <p>Switch to this tab to load the daily exceedance calendar.</p>
+            </div>
           </div>
-          <canvas id="aq-chart" height="180"></canvas>
         </div>
 
-        <!-- Temperature chart -->
-        <div class="chart-wrap">
-          <div class="chart-title">
-            <span class="dot" style="background:var(--temp)"></span> Temperature (2m)
-            <span style="color:var(--muted);font-size:11px;margin-left:auto">°C</span>
+        <!-- ── Seasonal tab (Feature 4) ── -->
+        <div id="tab-seasonal" class="tab-panel" style="display:none">
+          <div id="seasonal-content">
+            <div class="tab-placeholder">
+              <span>🌤</span>
+              <p>Switch to this tab to load the seasonal breakdown.</p>
+            </div>
           </div>
-          <canvas id="temp-chart" height="140"></canvas>
+        </div>
+
+        <!-- ── Draw Area tab (Feature 6) ── -->
+        <div id="tab-draw" class="tab-panel" style="display:none">
+          <div id="draw-idle">
+            <p class="section-title">Draw a custom polygon</p>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+              Draw any shape on the map to query air quality data within that exact area.
+            </p>
+            <button id="draw-start-btn" class="action-btn">✏ Start drawing</button>
+          </div>
+          <div id="draw-drawing" style="display:none">
+            <p style="font-size:13px;color:var(--warn);margin-bottom:10px;line-height:1.6">
+              🖊 Click on the map to add polygon points. Double-click to finish.
+            </p>
+            <button id="draw-cancel-btn" class="action-btn secondary">Cancel</button>
+          </div>
+          <div id="draw-results" style="display:none">
+            <div class="stat-card" id="mask-mean-card" style="margin-bottom:14px"></div>
+            <div class="chart-wrap">
+              <div class="chart-title">
+                <span class="dot" style="background:var(--no2)"></span> Monthly NO₂ inside polygon
+                <span style="color:var(--muted);font-size:11px;margin-left:auto">µg/m³</span>
+              </div>
+              <canvas id="mask-chart" height="160"></canvas>
+            </div>
+            <button id="draw-clear-btn" class="action-btn secondary">✕ Clear polygon</button>
+          </div>
         </div>
       </div>
     </div>
@@ -416,36 +675,94 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
+// Feature group that holds user-drawn polygons (Feature 6)
+const drawnItems = new L.FeatureGroup().addTo(map);
+
 // ──────────────────────────────────────────────
 // State
 // ──────────────────────────────────────────────
-let currentMarker = null;
-let pendingLat = null;
-let pendingLon = null;
-let aqChart = null;
-let tempChart = null;
+let currentMarker    = null;   // point-click marker
+let currentAreaLayer = null;   // named-area GeoJSON polygon
+let pendingLat       = null;
+let pendingLon       = null;
+let pendingArea      = null;   // e.g. "paris", "france"
+let currentQueryParams = null; // params for lazy tab fetches
+
+let aqChart       = null;
+let tempChart     = null;
+let windChart     = null;
+let seasonalChart = null;
+let maskChart     = null;
+
+let exceedanceData = null;  // null = not fetched; array = loaded
+let seasonalData   = null;
+let currentTab     = "overview";
+let drawHandler    = null;
+
+// Display names for the area datalist — also used for normalisation
+const AREA_NAMES = [
+  "France","Germany","Belgium","Netherlands","Spain","Italy","Portugal",
+  "Switzerland","Austria","Denmark","Sweden","Norway","Finland","Poland",
+  "Czechia","UK","Ireland",
+  "Paris","London","Berlin","Amsterdam","Brussels","Vienna","Zurich",
+  "Madrid","Rome","Lisbon","Dublin","Stockholm","Oslo","Copenhagen",
+  "Warsaw","Prague",
+];
 
 // ──────────────────────────────────────────────
-// Map click
+// Feature 1: Named area search
+// ──────────────────────────────────────────────
+const areaInput = document.getElementById("area-input");
+
+areaInput.addEventListener("change", () => {
+  const typed = areaInput.value.trim();
+  const match = AREA_NAMES.find(n => n.toLowerCase() === typed.toLowerCase());
+  if (match) selectArea(match.toLowerCase());
+});
+
+document.getElementById("clear-area-btn").addEventListener("click", () => {
+  pendingArea = null;
+  areaInput.value = "";
+  document.getElementById("clear-area-btn").style.display = "none";
+  if (currentAreaLayer) { map.removeLayer(currentAreaLayer); currentAreaLayer = null; }
+  document.getElementById("fetch-btn").disabled = (pendingLat === null);
+});
+
+function selectArea(area) {
+  pendingArea = area;
+  pendingLat  = null;
+  pendingLon  = null;
+  if (currentMarker)    { map.removeLayer(currentMarker);    currentMarker    = null; }
+  if (currentAreaLayer) { map.removeLayer(currentAreaLayer); currentAreaLayer = null; }
+  document.getElementById("clear-area-btn").style.display = "block";
+  document.getElementById("fetch-btn").disabled = false;
+  document.getElementById("hint").style.display = "none";
+  fetchData();
+}
+
+// ──────────────────────────────────────────────
+// Map click → point query
 // ──────────────────────────────────────────────
 map.on("click", (e) => {
-  pendingLat = e.latlng.lat;
-  pendingLon = e.latlng.lng;
+  // Leaflet.draw intercepts its own clicks; skip if drawing
+  if (currentTab === "draw" && drawHandler) return;
 
-  // Drop marker
-  if (currentMarker) map.removeLayer(currentMarker);
+  pendingLat  = e.latlng.lat;
+  pendingLon  = e.latlng.lng;
+  pendingArea = null;
+
+  areaInput.value = "";
+  document.getElementById("clear-area-btn").style.display = "none";
+
+  if (currentAreaLayer) { map.removeLayer(currentAreaLayer); currentAreaLayer = null; }
+  if (currentMarker)    map.removeLayer(currentMarker);
+
   currentMarker = L.circleMarker([pendingLat, pendingLon], {
-    radius: 7,
-    fillColor: "#6366f1",
-    color: "white",
-    weight: 2,
-    fillOpacity: 1,
+    radius: 7, fillColor: "#6366f1", color: "white", weight: 2, fillOpacity: 1,
   }).addTo(map);
 
   document.getElementById("fetch-btn").disabled = false;
   document.getElementById("hint").style.display = "none";
-
-  // Auto-fetch
   fetchData();
 });
 
@@ -455,49 +772,87 @@ map.on("click", (e) => {
 document.getElementById("fetch-btn").addEventListener("click", fetchData);
 
 // ──────────────────────────────────────────────
+// Tabs
+// ──────────────────────────────────────────────
+document.querySelectorAll(".tab-btn").forEach(btn =>
+  btn.addEventListener("click", () => setTab(btn.dataset.tab))
+);
+
+function setTab(tab) {
+  // Stop any active polygon drawing when navigating away
+  if (currentTab === "draw" && tab !== "draw" && drawHandler) {
+    drawHandler.disable();
+    drawHandler = null;
+    document.getElementById("draw-idle").style.display    = "block";
+    document.getElementById("draw-drawing").style.display = "none";
+  }
+
+  currentTab = tab;
+
+  document.querySelectorAll(".tab-btn").forEach(btn =>
+    btn.classList.toggle("active", btn.dataset.tab === tab)
+  );
+  document.querySelectorAll(".tab-panel").forEach(panel =>
+    panel.style.display = panel.id === `tab-${tab}` ? "block" : "none"
+  );
+
+  // Lazy-load on first visit
+  if (tab === "exceedance" && exceedanceData === null) loadExceedance();
+  if (tab === "seasonal"   && seasonalData   === null) loadSeasonal();
+}
+
+// ──────────────────────────────────────────────
 // Fetch & render
 // ──────────────────────────────────────────────
 async function fetchData() {
-  if (pendingLat === null) return;
+  if (pendingLat === null && !pendingArea) return;
 
   const yearStart = parseInt(document.getElementById("year-start").value);
-  const yearEnd = parseInt(document.getElementById("year-end").value);
+  const yearEnd   = parseInt(document.getElementById("year-end").value);
 
-  if (yearStart > yearEnd) {
-    showError("Start year must be ≤ end year.");
-    return;
-  }
+  if (yearStart > yearEnd) { showError("Start year must be ≤ end year."); return; }
 
   const start = `${yearStart}-01`;
-  const end = `${yearEnd}-12`;
+  const end   = `${yearEnd}-12`;
+
+  // Reset lazy-load caches for the new query
+  exceedanceData = null;
+  seasonalData   = null;
+  document.getElementById("exceedance-content").innerHTML =
+    `<div class="tab-placeholder"><span>📅</span><p>Switch to this tab to load the daily exceedance calendar.</p></div>`;
+  document.getElementById("seasonal-content").innerHTML =
+    `<div class="tab-placeholder"><span>🌤</span><p>Switch to this tab to load the seasonal breakdown.</p></div>`;
 
   const t0 = performance.now();
   setState("loading");
 
-  try {
-    const url = `/api/query?lat=${pendingLat}&lon=${pendingLon}&start=${start}&end=${end}`;
-    const tFetch = performance.now();
-    const resp = await fetch(url);
-    const tFetchDone = performance.now();
-    const data = await resp.json();
-    const tJsonDone = performance.now();
+  const params = new URLSearchParams({ start, end });
+  if (pendingArea) {
+    params.set("area", pendingArea);
+  } else {
+    params.set("lat", pendingLat);
+    params.set("lon", pendingLon);
+  }
 
-    // Parse Server-Timing header to show server vs browser gap
+  currentQueryParams = { area: pendingArea, lat: pendingLat, lon: pendingLon, start, end };
+
+  try {
+    const tFetch = performance.now();
+    const resp   = await fetch(`/api/query?${params}`);
+    const tFetchDone = performance.now();
+    const data   = await resp.json();
+    const tJsonDone  = performance.now();
+
     const st = resp.headers.get("Server-Timing") || "";
     const serverTotal = (st.match(/total[^,]*dur=(\d+)/) || [])[1];
     const gap = serverTotal ? (tFetchDone - tFetch - parseInt(serverTotal)).toFixed(1) : "?";
-
     console.log(
       `[profile] fetch: ${(tFetchDone - tFetch).toFixed(1)}ms` +
-      `  server-total: ${serverTotal ?? "?"}ms` +
-      `  gap(network+queue): ${gap}ms` +
+      `  server: ${serverTotal ?? "?"}ms  gap: ${gap}ms` +
       `  json(): ${(tJsonDone - tFetchDone).toFixed(1)}ms`
     );
 
-    if (!resp.ok) {
-      showError(data.error || "Server error");
-      return;
-    }
+    if (!resp.ok) { showError(data.error || "Server error"); return; }
 
     renderResults(data, yearStart, yearEnd, tJsonDone, t0);
   } catch (err) {
@@ -509,39 +864,49 @@ async function fetchData() {
 // Render
 // ──────────────────────────────────────────────
 function renderResults(data, yearStart, yearEnd, tDataReady, t0) {
-  const { airQuality, temperature, snappedLat, snappedLon } = data;
+  const { airQuality, temperature, wind, snappedLat, snappedLon, areaPolygon } = data;
 
-  // Hide spinner — but browser won't paint until JS task yields.
-  // We force a paint by scheduling chart work in the next animation frame.
+  // Hide spinner — yield to browser so spinner hide paints before Chart.js blocks
   setState("results");
   const tStateSet = performance.now();
   console.log(`[profile] setState(results): ${(tStateSet - t0).toFixed(1)}ms from click`);
 
-  // Yield to browser so the spinner hide PAINTS before Chart.js blocks the thread
   requestAnimationFrame(() => {
-    const tRafStart = performance.now();
+    const tRaf = performance.now();
 
-    // Coordinates
-    document.getElementById("coord-display").textContent =
-      `${snappedLat.toFixed(2)}°N, ${snappedLon.toFixed(2)}°E`;
-    document.getElementById("period-display").textContent =
-      `${yearStart}–${yearEnd}`;
+    // Location display
+    if (pendingArea) {
+      const display = AREA_NAMES.find(n => n.toLowerCase() === pendingArea) ?? pendingArea;
+      document.getElementById("coord-display").textContent = display;
+    } else {
+      document.getElementById("coord-display").textContent =
+        `${snappedLat.toFixed(2)}°N, ${snappedLon.toFixed(2)}°E`;
+    }
+    document.getElementById("period-display").textContent = `${yearStart}–${yearEnd}`;
 
-    // WHO comparison (annual means over the whole period)
-    const WHO = { no2: 10, pm25: 5 };
-    const no2Mean = avg(airQuality, "no2_mean");
-    const pm25Mean = avg(airQuality, "pm2p5_mean");
+    // Named-area polygon (Feature 1)
+    if (areaPolygon) {
+      if (currentAreaLayer) map.removeLayer(currentAreaLayer);
+      currentAreaLayer = L.geoJSON(areaPolygon, {
+        style: { color: "#8b5cf6", fillColor: "#8b5cf6", fillOpacity: 0.2, weight: 2 },
+      }).addTo(map);
+      map.fitBounds(currentAreaLayer.getBounds(), { padding: [40, 40] });
+    }
 
-    setWhoCard("no2", no2Mean, WHO.no2);
-    setWhoCard("pm25", pm25Mean, WHO.pm25);
+    // WHO compliance cards
+    setWhoCard("no2",  avg(airQuality, "no2_mean"),   10);
+    setWhoCard("pm25", avg(airQuality, "pm2p5_mean"),  5);
 
-    // ── AQ chart ──
-    const labels = airQuality.map(r => r.year_month || r.date || "");
-    const no2Series = airQuality.map(r => r.no2_mean ?? null);
+    // Feature 2: Trend badges
+    const no2Series  = airQuality.map(r => r.no2_mean   ?? null);
     const pm25Series = airQuality.map(r => r.pm2p5_mean ?? null);
+    renderTrendBadge("no2-trend",  "NO₂",   linearTrend(no2Series));
+    renderTrendBadge("pm25-trend", "PM2.5", linearTrend(pm25Series));
 
+    // AQ chart (in-place update)
+    const aqLabels = airQuality.map(r => r.year_month || r.date || "");
     if (aqChart) {
-      aqChart.data.labels = labels;
+      aqChart.data.labels = aqLabels;
       aqChart.data.datasets[0].data = no2Series;
       aqChart.data.datasets[1].data = pm25Series;
       aqChart.update("none");
@@ -549,40 +914,19 @@ function renderResults(data, yearStart, yearEnd, tDataReady, t0) {
       aqChart = new Chart(document.getElementById("aq-chart"), {
         type: "line",
         data: {
-          labels,
+          labels: aqLabels,
           datasets: [
-            {
-              label: "NO₂",
-              data: no2Series,
-              borderColor: "rgb(129,140,248)",
-              backgroundColor: "rgba(129,140,248,0.1)",
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.3,
-              fill: true,
-            },
-            {
-              label: "PM2.5",
-              data: pm25Series,
-              borderColor: "rgb(251,146,60)",
-              backgroundColor: "rgba(251,146,60,0.08)",
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.3,
-              fill: true,
-            },
+            { label: "NO₂",   data: no2Series,  borderColor: "rgb(129,140,248)", backgroundColor: "rgba(129,140,248,0.1)", borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true },
+            { label: "PM2.5", data: pm25Series, borderColor: "rgb(251,146,60)",  backgroundColor: "rgba(251,146,60,0.08)",  borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true },
           ],
         },
         options: chartOptions("µg/m³"),
       });
     }
 
-    // ── Temperature chart ──
+    // Temperature chart (in-place update)
     const tempLabels = temperature.map(r => r.year_month || r.date || "");
-    const tempSeries = temperature.map(r =>
-      r.t2m_mean != null ? +(r.t2m_mean - 273.15).toFixed(2) : null
-    );
-
+    const tempSeries = temperature.map(r => r.t2m_mean != null ? +(r.t2m_mean - 273.15).toFixed(2) : null);
     if (tempChart) {
       tempChart.data.labels = tempLabels;
       tempChart.data.datasets[0].data = tempSeries;
@@ -592,61 +936,392 @@ function renderResults(data, yearStart, yearEnd, tDataReady, t0) {
         type: "line",
         data: {
           labels: tempLabels,
-          datasets: [
-            {
-              label: "Temperature",
-              data: tempSeries,
-              borderColor: "rgb(52,211,153)",
-              backgroundColor: "rgba(52,211,153,0.1)",
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.4,
-              fill: true,
-            },
-          ],
+          datasets: [{ label: "Temperature", data: tempSeries, borderColor: "rgb(52,211,153)", backgroundColor: "rgba(52,211,153,0.1)", borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true }],
         },
         options: chartOptions("°C"),
       });
     }
 
-    // Credits — now comes directly from the query response
+    // Feature 5: Wind chart
+    renderWindChart(wind);
+
+    // Credits
     const creditsUsed = data.credits_used ?? 0;
     const creditsLeft = data.credits_remaining;
-    const badgeText = creditsLeft != null
+    document.getElementById("credits-badge").textContent = creditsLeft != null
       ? `${creditsUsed} used · ${creditsLeft} remaining`
       : `${creditsUsed} credits`;
-    document.getElementById("credits-badge").textContent = badgeText;
 
-    console.log(`[profile] charts rendered: ${(performance.now() - tRafStart).toFixed(1)}ms  total visible: ${(performance.now() - t0).toFixed(1)}ms`);
+    document.getElementById("results").dataset.loaded = "1";
+    console.log(`[profile] charts rendered: ${(performance.now() - tRaf).toFixed(1)}ms  total: ${(performance.now() - t0).toFixed(1)}ms`);
   });
 }
 
-function setWhoCard(id, mean, limit) {
-  const valEl = document.getElementById(`${id}-val`);
-  const barEl = document.getElementById(`${id}-bar`);
-  const noteEl = document.getElementById(`${id}-note`);
+// ──────────────────────────────────────────────
+// Feature 5: Wind speed chart
+// ──────────────────────────────────────────────
+function renderWindChart(windRows) {
+  const wrap = document.getElementById("wind-chart-wrap");
+  if (!windRows || windRows.length === 0) { wrap.style.display = "none"; return; }
 
+  wrap.style.display = "block";
+  const labels     = windRows.map(r => r.year_month || r.date || "");
+  const windSeries = windRows.map(r => r.wind_speed_mean ?? null);
+
+  if (windChart) {
+    windChart.data.labels = labels;
+    windChart.data.datasets[0].data = windSeries;
+    windChart.update("none");
+  } else {
+    windChart = new Chart(document.getElementById("wind-chart"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{ label: "Wind speed", data: windSeries, borderColor: "rgb(6,182,212)", backgroundColor: "rgba(6,182,212,0.1)", borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true }],
+      },
+      options: chartOptions("m/s"),
+    });
+  }
+}
+
+// ──────────────────────────────────────────────
+// Feature 2: Trend badges
+// ──────────────────────────────────────────────
+
+// Linear regression over monthly values → slope in µg/m³/year.
+function linearTrend(values) {
+  const pts = values.map((v, i) => [i, v]).filter(([, y]) => y != null);
+  if (pts.length < 4) return null;
+  const n     = pts.length;
+  const xMean = pts.reduce((s, [x])    => s + x, 0) / n;
+  const yMean = pts.reduce((s, [, y])  => s + y, 0) / n;
+  const num   = pts.reduce((s, [x, y]) => s + (x - xMean) * (y - yMean), 0);
+  const den   = pts.reduce((s, [x])    => s + (x - xMean) ** 2, 0);
+  if (den === 0) return null;
+  return (num / den) * 12; // monthly slope → annual
+}
+
+function renderTrendBadge(id, name, trend) {
+  const el = document.getElementById(id);
+  if (trend == null) {
+    el.innerHTML = `<span style="color:var(--muted);font-size:10px;text-transform:uppercase">${name} trend</span><br><span style="color:var(--muted)">n/a (need ≥ 4 months)</span>`;
+    return;
+  }
+  const improving = trend < 0;
+  const color = improving ? "var(--good)" : "var(--danger)";
+  const arrow = improving ? "↓" : "↑";
+  const word  = improving ? "improving" : "worsening";
+  const sign  = trend > 0 ? "+" : "";
+  el.innerHTML = `
+    <span style="color:var(--muted);font-size:10px;text-transform:uppercase">${name} trend</span><br>
+    <span style="color:${color};font-weight:600">${sign}${trend.toFixed(2)} µg/m³/yr ${arrow} ${word}</span>
+  `;
+}
+
+// ──────────────────────────────────────────────
+// Feature 3: Exceedance calendar (lazy-loaded)
+// ──────────────────────────────────────────────
+async function loadExceedance() {
+  if (!currentQueryParams) return;
+
+  document.getElementById("exceedance-content").innerHTML =
+    `<div class="tab-placeholder"><div class="spinner" style="width:28px;height:28px;border-width:2px"></div><p>Loading daily NO₂…</p></div>`;
+
+  const { area, lat, lon, start, end } = currentQueryParams;
+  const params = new URLSearchParams({ start, end });
+  if (area) params.set("area", area); else { params.set("lat", lat); params.set("lon", lon); }
+
+  try {
+    const resp = await fetch(`/api/exceedance?${params}`);
+    const data = await resp.json();
+    if (!resp.ok) {
+      document.getElementById("exceedance-content").innerHTML = `<p style="color:var(--danger)">${data.error}</p>`;
+      return;
+    }
+    exceedanceData = data.rows;
+    document.getElementById("exceedance-content").innerHTML = buildExceedanceCalendar(exceedanceData);
+  } catch (err) {
+    document.getElementById("exceedance-content").innerHTML = `<p style="color:var(--danger)">Error: ${err.message}</p>`;
+  }
+}
+
+function buildExceedanceCalendar(rows) {
+  // Average across any multiple lat/lon grid cells that share the same date
+  const byDate = {};
+  for (const r of rows) {
+    const d = r.date || "";
+    if (!byDate[d]) byDate[d] = { sum: 0, cnt: 0 };
+    if (r.no2_mean != null) { byDate[d].sum += Number(r.no2_mean); byDate[d].cnt++; }
+  }
+
+  const dailyMean = {};
+  for (const [date, { sum, cnt }] of Object.entries(byDate)) {
+    dailyMean[date] = cnt > 0 ? sum / cnt : null;
+  }
+
+  // Group by year-month for the calendar rows
+  const monthData = {};
+  for (const [date, val] of Object.entries(dailyMean)) {
+    const ym  = date.slice(0, 7);
+    const day = parseInt(date.slice(8, 10));
+    if (!monthData[ym]) monthData[ym] = {};
+    monthData[ym][day] = val;
+  }
+
+  // Count days above WHO daily limit (25 µg/m³)
+  const WHO_LIMIT = 25;
+  let daysAbove = 0, totalDays = 0;
+  for (const val of Object.values(dailyMean)) {
+    if (val != null) { totalDays++; if (val > WHO_LIMIT) daysAbove++; }
+  }
+
+  const legend = [
+    { c: "#1f2937", label: "No data" },
+    { c: "#14532d", label: "0–5" },
+    { c: "#16a34a", label: "5–10" },
+    { c: "#ca8a04", label: "10–25" },
+    { c: "#ea580c", label: "25–40" },
+    { c: "#dc2626", label: "40+ µg/m³" },
+  ];
+
+  let html = `
+    <p class="exc-summary">${daysAbove} of ${totalDays} days above WHO limit (${WHO_LIMIT} µg/m³)</p>
+    <div class="exc-legend">
+      ${legend.map(l => `<span class="exc-legend-item" style="--c:${l.c}">${l.label}</span>`).join("")}
+    </div>
+  `;
+
+  for (const ym of Object.keys(monthData).sort()) {
+    const [y, m]      = ym.split("-").map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const label       = new Date(y, m - 1).toLocaleString("default", { month: "short" }) + " " + y;
+    let cells = "";
+    for (let d = 1; d <= daysInMonth; d++) {
+      const val   = monthData[ym][d] ?? null;
+      const color = exceedanceColor(val);
+      const tip   = val != null
+        ? `${new Date(y, m - 1, d).toLocaleDateString()}: ${val.toFixed(1)} µg/m³`
+        : "No data";
+      cells += `<div class="exc-cell" style="background:${color}" title="${tip}"></div>`;
+    }
+    html += `<div class="exc-month-row"><span class="exc-month-label">${label}</span><div class="exc-days">${cells}</div></div>`;
+  }
+
+  return html;
+}
+
+function exceedanceColor(val) {
+  if (val == null || val <= 0) return "#1f2937";
+  if (val < 5)  return "#14532d";
+  if (val < 10) return "#16a34a";
+  if (val < 25) return "#ca8a04";
+  if (val < 40) return "#ea580c";
+  return "#dc2626";
+}
+
+// ──────────────────────────────────────────────
+// Feature 4: Seasonal breakdown (lazy-loaded)
+// ──────────────────────────────────────────────
+async function loadSeasonal() {
+  if (!currentQueryParams) return;
+
+  document.getElementById("seasonal-content").innerHTML =
+    `<div class="tab-placeholder"><div class="spinner" style="width:28px;height:28px;border-width:2px"></div><p>Loading seasonal data…</p></div>`;
+
+  const { area, lat, lon, start, end } = currentQueryParams;
+  const params = new URLSearchParams({ start, end });
+  if (area) params.set("area", area); else { params.set("lat", lat); params.set("lon", lon); }
+
+  try {
+    const resp = await fetch(`/api/seasonal?${params}`);
+    const data = await resp.json();
+    if (!resp.ok) {
+      document.getElementById("seasonal-content").innerHTML = `<p style="color:var(--danger)">${data.error}</p>`;
+      return;
+    }
+    seasonalData = data.rows;
+    document.getElementById("seasonal-content").innerHTML =
+      `<div class="chart-wrap"><div class="chart-title">Seasonal NO₂ &amp; PM2.5</div><canvas id="seasonal-chart" height="220"></canvas></div>`;
+    renderSeasonalChart(seasonalData);
+  } catch (err) {
+    document.getElementById("seasonal-content").innerHTML = `<p style="color:var(--danger)">Error: ${err.message}</p>`;
+  }
+}
+
+function renderSeasonalChart(rows) {
+  const SEASONS = ["DJF", "MAM", "JJA", "SON"];
+  const LABELS  = { DJF: "Winter (DJF)", MAM: "Spring (MAM)", JJA: "Summer (JJA)", SON: "Autumn (SON)" };
+
+  const acc = {};
+  for (const s of SEASONS) acc[s] = { no2: [], pm25: [] };
+
+  for (const r of rows) {
+    if (!acc[r.season]) continue;
+    if (r.no2_mean   != null) acc[r.season].no2.push(Number(r.no2_mean));
+    if (r.pm2p5_mean != null) acc[r.season].pm25.push(Number(r.pm2p5_mean));
+  }
+
+  const meanOf = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
+  if (seasonalChart) seasonalChart.destroy();
+  seasonalChart = new Chart(document.getElementById("seasonal-chart"), {
+    type: "bar",
+    data: {
+      labels: SEASONS.map(s => LABELS[s]),
+      datasets: [
+        { label: "NO₂",   data: SEASONS.map(s => meanOf(acc[s].no2)),  backgroundColor: "rgba(129,140,248,0.75)", borderRadius: 4 },
+        { label: "PM2.5", data: SEASONS.map(s => meanOf(acc[s].pm25)), backgroundColor: "rgba(251,146,60,0.75)",  borderRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      plugins: {
+        legend: { display: true, labels: { color: "#9ca3af", boxWidth: 12 } },
+        tooltip: {
+          backgroundColor: "rgba(26,29,39,0.95)",
+          titleColor: "#e8eaf0", bodyColor: "#9ca3af",
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} µg/m³` },
+        },
+      },
+      scales: {
+        x: { ticks: { color: "#4b5563" }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { ticks: { color: "#4b5563" }, grid: { color: "rgba(255,255,255,0.04)" }, title: { display: true, text: "µg/m³", color: "#6b7280" } },
+      },
+    },
+  });
+}
+
+// ──────────────────────────────────────────────
+// Feature 6: Draw custom polygon mask
+// ──────────────────────────────────────────────
+document.getElementById("draw-start-btn").addEventListener("click", () => {
+  document.getElementById("draw-idle").style.display    = "none";
+  document.getElementById("draw-drawing").style.display = "block";
+  drawHandler = new L.Draw.Polygon(map, {
+    shapeOptions: { color: "#6366f1", fillColor: "#6366f1", fillOpacity: 0.2, weight: 2 },
+  });
+  drawHandler.enable();
+});
+
+document.getElementById("draw-cancel-btn").addEventListener("click", () => {
+  if (drawHandler) { drawHandler.disable(); drawHandler = null; }
+  document.getElementById("draw-idle").style.display    = "block";
+  document.getElementById("draw-drawing").style.display = "none";
+});
+
+document.getElementById("draw-clear-btn").addEventListener("click", () => {
+  drawnItems.clearLayers();
+  document.getElementById("draw-results").style.display = "none";
+  document.getElementById("draw-idle").style.display    = "block";
+  if (maskChart) { maskChart.destroy(); maskChart = null; }
+});
+
+map.on(L.Draw.Event.CREATED, async (e) => {
+  drawnItems.clearLayers();
+  drawnItems.addLayer(e.layer);
+  drawHandler = null;
+
+  document.getElementById("draw-drawing").style.display = "none";
+  document.getElementById("draw-results").style.display = "block";
+  document.getElementById("mask-mean-card").textContent  = "Querying polygon area…";
+
+  const bounds  = e.layer.getBounds();
+  const geoJson = e.layer.toGeoJSON();
+
+  const yearStart = parseInt(document.getElementById("year-start").value);
+  const yearEnd   = parseInt(document.getElementById("year-end").value);
+
+  try {
+    const resp = await fetch("/api/mask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lat_min:    bounds.getSouth(),
+        lat_max:    bounds.getNorth(),
+        lon_min:    bounds.getWest(),
+        lon_max:    bounds.getEast(),
+        start:      `${yearStart}-01`,
+        end:        `${yearEnd}-12`,
+        mask:       geoJson.geometry,
+        variables:  ["no2", "pm2p5"],
+        aggregate:  "monthly",
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { document.getElementById("mask-mean-card").textContent = data.error; return; }
+    renderMaskResults(data.rows);
+  } catch (err) {
+    document.getElementById("mask-mean-card").textContent = "Error: " + err.message;
+  }
+});
+
+function renderMaskResults(rows) {
+  const allNo2  = rows.map(r => r.no2_mean).filter(v => v != null).map(Number);
+  const meanNo2 = allNo2.length ? allNo2.reduce((a, b) => a + b, 0) / allNo2.length : null;
+
+  document.getElementById("mask-mean-card").innerHTML = meanNo2 != null
+    ? `<span style="color:var(--muted);font-size:11px;text-transform:uppercase">Mean NO₂ inside polygon</span><br>
+       <span style="font-size:22px;font-weight:700;color:var(--no2)">${meanNo2.toFixed(2)}</span>
+       <span style="color:var(--muted);font-size:12px"> µg/m³</span>`
+    : "No grid points found inside the polygon.";
+
+  const labels  = [...new Set(rows.map(r => r.year_month || r.date || ""))].sort();
+  const no2Data = labels.map(ym => {
+    const vals = rows.filter(r => (r.year_month || r.date) === ym).map(r => r.no2_mean).filter(v => v != null).map(Number);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  });
+
+  if (maskChart) maskChart.destroy();
+  maskChart = new Chart(document.getElementById("mask-chart"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: "NO₂", data: no2Data, backgroundColor: "rgba(129,140,248,0.75)", borderRadius: 3 }],
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(26,29,39,0.95)",
+          titleColor: "#e8eaf0", bodyColor: "#9ca3af",
+          callbacks: { label: ctx => ` NO₂: ${ctx.parsed.y?.toFixed(2)} µg/m³` },
+        },
+      },
+      scales: {
+        x: { ticks: { color: "#4b5563", maxTicksLimit: 8, maxRotation: 0 }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { ticks: { color: "#4b5563" }, grid: { color: "rgba(255,255,255,0.04)" } },
+      },
+    },
+  });
+}
+
+// ──────────────────────────────────────────────
+// Shared helpers
+// ──────────────────────────────────────────────
+function avg(rows, col) {
+  const vals = rows.map(r => r[col]).filter(v => v != null).map(Number);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}
+
+function setWhoCard(id, mean, limit) {
+  const valEl  = document.getElementById(`${id}-val`);
+  const barEl  = document.getElementById(`${id}-bar`);
+  const noteEl = document.getElementById(`${id}-note`);
   if (mean == null) { valEl.textContent = "n/a"; return; }
 
   const ratio = mean / limit;
-  const pct = Math.min(100, ratio * 100 / 4); // 4× WHO = full bar
+  const pct   = Math.min(100, ratio * 100 / 4);
   const color = ratio <= 1 ? "var(--good)" : ratio <= 2 ? "var(--warn)" : "var(--danger)";
-  const times = ratio.toFixed(1);
 
-  valEl.textContent = mean.toFixed(1);
-  valEl.style.color = color;
-  barEl.style.width = pct + "%";
+  valEl.textContent   = mean.toFixed(1);
+  valEl.style.color   = color;
+  barEl.style.width   = pct + "%";
   barEl.style.background = color;
-  noteEl.textContent = ratio <= 1
-    ? `✓ Within WHO limit`
-    : `⚠ ${times}× WHO guideline`;
-  noteEl.style.color = color;
-}
-
-function avg(rows, col) {
-  const vals = rows.map(r => r[col]).filter(v => v != null);
-  if (!vals.length) return null;
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
+  noteEl.textContent  = ratio <= 1 ? `✓ Within WHO limit` : `⚠ ${ratio.toFixed(1)}× WHO guideline`;
+  noteEl.style.color  = color;
 }
 
 function chartOptions(unit) {
@@ -658,24 +1333,14 @@ function chartOptions(unit) {
       legend: { display: false },
       tooltip: {
         backgroundColor: "rgba(26,29,39,0.95)",
-        borderColor: "rgba(255,255,255,0.08)",
-        borderWidth: 1,
-        titleColor: "#e8eaf0",
-        bodyColor: "#9ca3af",
-        callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} ${unit}`,
-        },
+        borderColor: "rgba(255,255,255,0.08)", borderWidth: 1,
+        titleColor: "#e8eaf0", bodyColor: "#9ca3af",
+        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} ${unit}` },
       },
     },
     scales: {
-      x: {
-        ticks: { color: "#4b5563", maxTicksLimit: 8, maxRotation: 0 },
-        grid: { color: "rgba(255,255,255,0.04)" },
-      },
-      y: {
-        ticks: { color: "#4b5563" },
-        grid: { color: "rgba(255,255,255,0.04)" },
-      },
+      x: { ticks: { color: "#4b5563", maxTicksLimit: 8, maxRotation: 0 }, grid: { color: "rgba(255,255,255,0.04)" } },
+      y: { ticks: { color: "#4b5563" }, grid: { color: "rgba(255,255,255,0.04)" } },
     },
   };
 }
@@ -684,29 +1349,32 @@ function chartOptions(unit) {
 // UI state machine
 // ──────────────────────────────────────────────
 function setState(state) {
-  document.getElementById("welcome").style.display = "none";
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("results").style.display = "none";
+  document.getElementById("welcome").style.display   = "none";
+  document.getElementById("loading").style.display   = "none";
+  document.getElementById("results").style.display   = "none";
   document.getElementById("error-msg").style.display = "none";
+  document.getElementById("tabs").style.display      = "none";
 
   if (state === "loading") {
     document.getElementById("loading").style.display = "flex";
-    document.getElementById("fetch-btn").disabled = true;
+    document.getElementById("fetch-btn").disabled    = true;
   } else if (state === "results") {
     document.getElementById("results").style.display = "block";
-    document.getElementById("fetch-btn").disabled = false;
+    document.getElementById("tabs").style.display    = "flex";
+    document.getElementById("fetch-btn").disabled    = false;
+    setTab("overview");
   }
 }
 
 function showError(msg) {
   const el = document.getElementById("error-msg");
-  el.textContent = msg;
-  el.style.display = "block";
+  el.textContent       = msg;
+  el.style.display     = "block";
   document.getElementById("loading").style.display = "none";
-  document.getElementById("fetch-btn").disabled = false;
-  // Show previous results if they exist
+  document.getElementById("fetch-btn").disabled    = false;
   if (document.getElementById("results").dataset.loaded) {
     document.getElementById("results").style.display = "block";
+    document.getElementById("tabs").style.display    = "flex";
   }
 }
 </script>
