@@ -57,7 +57,7 @@ Replace `sk_live_YOUR_API_KEY` in each notebook with your key from [jiskta.com/d
 | Language | Package | Status |
 |----------|---------|--------|
 | Python | [`jiskta`](https://github.com/fvsever/jiskta-python) | ✅ Available |
-| Node.js | `jiskta` (npm) | 🔜 Coming soon |
+| Node.js | [`jiskta`](https://github.com/fvsever/jiskta-node) | ✅ Available |
 | R | `jiskta` (CRAN) | 🔜 Coming soon |
 
 ## Credits
