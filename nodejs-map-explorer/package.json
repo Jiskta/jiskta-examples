@@ -10,6 +10,6 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "jiskta": "github:fvsever/jiskta-node"
+    "jiskta": "github:jiskta/jiskta-node"
   }
 }
