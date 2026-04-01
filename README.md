@@ -38,7 +38,7 @@ pip install -r requirements.txt
 Or manually:
 
 ```bash
-pip install "git+https://github.com/jiskta/jiskta-python.git#egg=jiskta[pandas]" matplotlib seaborn numpy jupyterlab
+pip install "jiskta[pandas]>=0.5.0" matplotlib seaborn numpy jupyterlab
 ```
 
 ### 4 — Set your API key
@@ -59,10 +59,10 @@ jupyter lab
 
 ## SDK
 
-The [jiskta Python SDK](https://github.com/jiskta/jiskta-python) is available on GitHub:
+The [jiskta Python SDK](https://pypi.org/project/jiskta/) is available on PyPI:
 
 ```bash
-pip install "git+https://github.com/jiskta/jiskta-python.git#egg=jiskta[pandas]"
+pip install "jiskta[pandas]"
 ```
 
 Full documentation: [jiskta.com/docs](https://jiskta.com/docs)

@@ -1,4 +1,4 @@
-jiskta[pandas] @ git+https://github.com/jiskta/jiskta-python.git
+jiskta[pandas]>=0.5.0
 matplotlib
 seaborn
 numpy
