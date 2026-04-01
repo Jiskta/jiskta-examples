@@ -54,15 +54,21 @@ app.get("/api/query", async (req, res) => {
 
     // Fetch air quality+temperature and wind speed in parallel.
     // Wind (ERA5) uses allSettled so a missing ERA5 year doesn't fail the whole request.
+    // wind_speed is derived from ERA5 u10 + v10 (√(u²+v²)), sent as two separate variables.
     const [aqResult, windResult] = await Promise.allSettled([
       client.query({ ...loc, start, end, variables: ["no2", "pm2p5", "t2m"], aggregate: "monthly" }),
-      client.query({ ...loc, start, end, variables: ["wind_speed"],           aggregate: "monthly" }),
+      client.query({ ...loc, start, end, variables: ["u10", "v10"],           aggregate: "monthly" }),
     ]);
 
     if (aqResult.status === "rejected") throw aqResult.reason;
     const { rows, meta } = aqResult.value;
-    const windRows = windResult.status === "fulfilled" ? windResult.value.rows : [];
+    const windRaw = windResult.status === "fulfilled" ? windResult.value.rows : [];
     if (windResult.status === "rejected") console.warn(`[query] wind data unavailable: ${windResult.reason?.message}`);
+    // Compute scalar wind speed from u10 and v10 components (m/s)
+    const windRows = windRaw.map(({ lat, lon, year_month, u10_mean, v10_mean }) => ({
+      lat, lon, year_month,
+      wind_speed_mean: (u10_mean != null && v10_mean != null) ? Math.sqrt(u10_mean ** 2 + v10_mean ** 2) : null,
+    }));
 
     const tApiMs = Date.now() - tApi;
     console.log(`[query] Jiskta API: ${tApiMs}ms, rows=${rows.length}, credits_remaining=${meta.credits_remaining}`);
