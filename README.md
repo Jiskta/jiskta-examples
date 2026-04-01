@@ -25,7 +25,7 @@ Sign up at [jiskta.com](https://jiskta.com) and copy your key from the [dashboar
 ### 2 — Clone this repo
 
 ```bash
-git clone https://github.com/fvsever/jiskta-examples.git
+git clone https://github.com/jiskta/jiskta-examples.git
 cd jiskta-examples
 ```
 
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 Or manually:
 
 ```bash
-pip install "jiskta[pandas]>=0.5.0" matplotlib seaborn numpy jupyterlab
+pip install "git+https://github.com/jiskta/jiskta-python.git#egg=jiskta[pandas]" matplotlib seaborn numpy jupyterlab
 ```
 
 ### 4 — Set your API key
@@ -59,10 +59,10 @@ jupyter lab
 
 ## SDK
 
-The [jiskta Python SDK](https://pypi.org/project/jiskta/) is available on PyPI:
+The [jiskta Python SDK](https://github.com/jiskta/jiskta-python) is available on GitHub:
 
 ```bash
-pip install "jiskta[pandas]"
+pip install "git+https://github.com/jiskta/jiskta-python.git#egg=jiskta[pandas]"
 ```
 
 Full documentation: [jiskta.com/docs](https://jiskta.com/docs)
